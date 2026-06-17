@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --border: #222230;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --text: #e8e8f0;
+      --muted: #7a7a9a;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,10,15,.9);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .company-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+    .powered { font-size: .75rem; color: var(--muted); }
+
+    .layout { display: flex; height: calc(100vh - 58px); }
+
+    /* SIDEBAR - product list */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      background: var(--surface);
+    }
+    .sidebar-header { padding: 1rem; border-bottom: 1px solid var(--border); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .product-card {
+      display: flex; gap: .75rem; align-items: center;
+      padding: .875rem 1rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .product-card:hover { background: rgba(108,99,255,.07); }
+    .product-card.active { background: rgba(108,99,255,.13); border-left: 3px solid var(--accent); }
+    .product-thumb {
+      width: 48px; height: 48px;
+      border-radius: 6px;
+      background: var(--border);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .product-thumb-placeholder {
+      width: 48px; height: 48px;
+      border-radius: 6px;
+      background: rgba(108,99,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .product-info h3 { font-size: .875rem; font-weight: 600; margin-bottom: .2rem; }
+    .product-info p { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+
+    /* MAIN VIEWER */
+    .viewer-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    model-viewer {
+      width: 100%;
+      flex: 1;
+      background: var(--bg);
+    }
+    .viewer-controls {
+      padding: .75rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .control-hint { font-size: .75rem; color: var(--muted); margin-right: auto; }
+    .ar-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      padding: .5rem 1.25rem;
+      border-radius: 6px;
+      font-size: .875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; gap: .4rem;
+    }
+    .ar-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .no-ar-msg { font-size: .75rem; color: var(--muted); font-style: italic; }
+
+    /* Empty state */
+    .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 1rem; color: var(--muted); text-align: center; padding: 2rem; }
+    .empty-icon { font-size: 3rem; }
+
+    /* Mobile responsive */
+    @media (max-width: 640px) {
+      .layout { flex-direction: column; height: auto; }
+      .sidebar { width: 100%; height: auto; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); display: flex; flex-direction: row; overflow-x: auto; }
+      .sidebar-header { display: none; }
+      .product-card { min-width: 180px; border-bottom: none; border-right: 1px solid var(--border); }
+      .viewer-area { height: 60vh; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  // Data injected by the server
+  const COMPANY = __COMPANY_DATA__;
+  const PRODUCTS = __PRODUCTS_DATA__;
+</script>
+
+<header>
+  <div class="company-name" id="company-name">Loading…</div>
+  <div class="powered">Powered by View3D</div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">Products</div>
+    <div id="product-list"></div>
+  </aside>
+
+  <div class="viewer-area">
+    <div id="viewer-container" style="flex:1;display:flex;flex-direction:column;">
+      <div class="empty" id="empty-state">
+        <div class="empty-icon">📦</div>
+        <p>Select a product to view in 3D</p>
+      </div>
+    </div>
+
+    <div class="viewer-controls" id="viewer-controls" style="display:none;">
+      <span class="control-hint">🖱 Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-click to pan</span>
+      <span id="no-ar-msg" class="no-ar-msg" style="display:none;">AR not supported on this device</span>
+      <button class="ar-btn" id="ar-btn" style="display:none;">
+        <span>📱</span> View in AR
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+<script>
+  document.getElementById('company-name').textContent = COMPANY.name;
+  document.title = COMPANY.name + ' — 3D Products';
+
+  let currentViewer = null;
+  let arSupported = false;
+
+  // Check AR support
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-ar')
+      .then(supported => { arSupported = supported; })
+      .catch(() => { arSupported = false; });
+  }
+
+  // Render sidebar product list
+  const list = document.getElementById('product-list');
+  if (PRODUCTS.length === 0) {
+    list.innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.8rem;">No products yet.</div>';
+  } else {
+    PRODUCTS.forEach((product, i) => {
+      const card = document.createElement('div');
+      card.className = 'product-card' + (i === 0 ? ' active' : '');
+      card.dataset.id = product.id;
+      card.innerHTML = `
+        ${product.image_url
+          ? `<img class="product-thumb" src="${product.image_url}" alt="${product.name}" />`
+          : `<div class="product-thumb-placeholder">🔮</div>`
+        }
+        <div class="product-info">
+          <h3>${product.name}</h3>
+          <p>${product.description ? product.description.slice(0,60) + (product.description.length > 60 ? '…' : '') : 'No description'}</p>
+        </div>
+      `;
+      card.addEventListener('click', () => loadProduct(product));
+      list.appendChild(card);
+    });
+    // Auto-load first product
+    if (PRODUCTS.length > 0) loadProduct(PRODUCTS[0]);
+  }
+
+  function loadProduct(product) {
+    // Update active state
+    document.querySelectorAll('.product-card').forEach(c => c.classList.remove('active'));
+    const activeCard = document.querySelector(`.product-card[data-id="${product.id}"]`);
+    if (activeCard) activeCard.classList.add('active');
+
+    // Hide empty state
+    document.getElementById('empty-state').style.display = 'none';
+
+    // Remove old model-viewer if exists
+    const container = document.getElementById('viewer-container');
+    if (currentViewer) currentViewer.remove();
+
+    // Create model-viewer
+    const mv = document.createElement('model-viewer');
+    mv.setAttribute('src', product.model_url);
+    mv.setAttribute('alt', product.name);
+    mv.setAttribute('camera-controls', '');
+    mv.setAttribute('auto-rotate', '');
+    mv.setAttribute('shadow-intensity', '1');
+    mv.setAttribute('environment-image', 'neutral');
+    mv.setAttribute('ar', '');
+    mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+    mv.style.flex = '1';
+    mv.style.width = '100%';
+
+    if (product.image_url) {
+      mv.setAttribute('poster', product.image_url);
+    }
+
+    container.appendChild(mv);
+    currentViewer = mv;
+
+    // Show controls
+    const controls = document.getElementById('viewer-controls');
+    controls.style.display = 'flex';
+
+    // AR Button
+    const arBtn = document.getElementById('ar-btn');
+    const noArMsg = document.getElementById('no-ar-msg');
+
+    // iOS uses Quick Look automatically via model-viewer's ar button slot
+    // For Android/desktop, check WebXR support
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if (isIOS) {
+      // iOS: model-viewer handles Quick Look automatically
+      arBtn.style.display = 'flex';
+      noArMsg.style.display = 'none';
+      arBtn.onclick = () => mv.activateAR();
+    } else if (arSupported) {
+      arBtn.style.display = 'flex';
+      noArMsg.style.display = 'none';
+      arBtn.onclick = () => mv.activateAR();
+    } else {
+      // Not supported — show message, hide button
+      arBtn.style.display = 'none';
+      noArMsg.style.display = 'inline';
+    }
+  }
+</script>
+</body>
+</html>

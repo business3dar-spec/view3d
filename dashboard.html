@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — View3D</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --border: #222230;
+      --accent: #6c63ff; --accent2: #00d4aa; --text: #e8e8f0; --muted: #7a7a9a;
+      --danger: #ff5f5f;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      background: rgba(10,10,15,.9); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+    .header-right { display: flex; gap: .75rem; align-items: center; }
+    .view-link {
+      font-size: .8rem; color: var(--accent2); text-decoration: none;
+      border: 1px solid rgba(0,212,170,.3); padding: .35rem .75rem; border-radius: 6px;
+    }
+    .company-label { font-size: .875rem; color: var(--muted); }
+
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Stats row */
+    .stats { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.5rem; flex: 1; min-width: 140px;
+    }
+    .stat-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+    .stat-value { font-family: 'Syne', sans-serif; font-size: 1.75rem; font-weight: 800; margin-top: .25rem; }
+    .stat-value.accent { color: var(--accent); }
+    .stat-value.green { color: var(--accent2); }
+
+    /* Upload form */
+    .upload-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;
+    }
+    .upload-section h2 { font-family: 'Syne', sans-serif; font-size: 1.125rem; margin-bottom: 1.25rem; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: .8rem; font-weight: 500; color: var(--muted); }
+    input[type=text], textarea {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: .625rem .875rem; color: var(--text); font-size: .875rem;
+      font-family: 'Inter', sans-serif; outline: none;
+      transition: border-color .2s;
+    }
+    input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 72px; }
+
+    .file-drop {
+      border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem;
+      text-align: center; cursor: pointer; transition: border-color .2s;
+      background: var(--bg);
+    }
+    .file-drop:hover, .file-drop.dragover { border-color: var(--accent); }
+    .file-drop input { display: none; }
+    .file-drop-icon { font-size: 1.75rem; margin-bottom: .5rem; }
+    .file-drop p { font-size: .8rem; color: var(--muted); }
+    .file-drop strong { color: var(--accent); }
+    .file-selected { font-size: .8rem; color: var(--accent2); margin-top: .4rem; }
+
+    .submit-row { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; }
+    .btn-upload {
+      background: var(--accent); color: #fff; border: none; padding: .75rem 1.75rem;
+      border-radius: 8px; font-size: .9rem; font-weight: 500; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: opacity .2s;
+    }
+    .btn-upload:hover { opacity: .85; }
+    .btn-upload:disabled { opacity: .5; cursor: not-allowed; }
+    .upload-status { font-size: .85rem; }
+    .upload-status.success { color: var(--accent2); }
+    .upload-status.error { color: var(--danger); }
+
+    /* Progress bar */
+    .progress { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-top: .75rem; display: none; }
+    .progress-bar { height: 4px; background: var(--accent); border-radius: 2px; width: 0; transition: width .3s; }
+
+    /* Products list */
+    .products-section h2 { font-family: 'Syne', sans-serif; font-size: 1.125rem; margin-bottom: 1.25rem; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+
+    .product-item {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    }
+    .product-preview {
+      height: 140px; background: var(--bg);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .product-preview model-viewer { width: 100%; height: 100%; }
+    .product-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .product-preview .no-preview { font-size: 2rem; color: var(--border); }
+    .product-body { padding: .875rem; }
+    .product-body h3 { font-size: .875rem; font-weight: 600; margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-body p { font-size: .75rem; color: var(--muted); margin-bottom: .75rem; line-height: 1.4; }
+    .product-actions { display: flex; gap: .5rem; }
+    .btn-sm {
+      font-size: .75rem; padding: .3rem .7rem; border-radius: 5px;
+      border: 1px solid var(--border); background: transparent; color: var(--text);
+      cursor: pointer; text-decoration: none; font-family: 'Inter', sans-serif;
+      transition: background .15s;
+    }
+    .btn-sm:hover { background: rgba(255,255,255,.05); }
+    .btn-sm.danger { color: var(--danger); border-color: rgba(255,95,95,.3); }
+    .btn-sm.danger:hover { background: rgba(255,95,95,.1); }
+
+    .empty-products {
+      text-align: center; padding: 3rem; color: var(--muted);
+      border: 1px dashed var(--border); border-radius: 12px;
+    }
+    .empty-products .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+
+    .limit-warning {
+      background: rgba(255,95,95,.1); border: 1px solid rgba(255,95,95,.3);
+      border-radius: 8px; padding: .75rem 1rem; font-size: .85rem; color: var(--danger);
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">View3D Dashboard</div>
+  <div class="header-right">
+    <span class="company-label" id="company-label">Loading…</span>
+    <a id="view-link" href="#" class="view-link" target="_blank">View public page ↗</a>
+  </div>
+</header>
+
+<main>
+  <div id="limit-warning" class="limit-warning" style="display:none;"></div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Products</div>
+      <div class="stat-value accent" id="stat-products">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Plan limit</div>
+      <div class="stat-value" id="stat-limit">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Plan</div>
+      <div class="stat-value green" id="stat-plan">—</div>
+    </div>
+  </div>
+
+  <!-- Upload Form -->
+  <div class="upload-section">
+    <h2>Add a new product</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Product name *</label>
+        <input type="text" id="prod-name" placeholder="e.g. Wireless Headphones" />
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="prod-desc" placeholder="Short description (optional)" />
+      </div>
+      <div class="field">
+        <label>3D Model (.glb or .gltf) *</label>
+        <div class="file-drop" id="model-drop" onclick="document.getElementById('model-file').click()">
+          <input type="file" id="model-file" accept=".glb,.gltf" />
+          <div class="file-drop-icon">📦</div>
+          <p>Click to select or <strong>drag & drop</strong><br>.glb / .gltf file</p>
+          <div class="file-selected" id="model-selected"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Thumbnail image (optional)</label>
+        <div class="file-drop" id="image-drop" onclick="document.getElementById('image-file').click()">
+          <input type="file" id="image-file" accept=".jpg,.jpeg,.png,.webp" />
+          <div class="file-drop-icon">🖼</div>
+          <p>Click to select or <strong>drag & drop</strong><br>JPG / PNG / WEBP</p>
+          <div class="file-selected" id="image-selected"></div>
+        </div>
+      </div>
+    </div>
+    <div class="submit-row">
+      <button class="btn-upload" id="upload-btn" onclick="uploadProduct()">Upload Product</button>
+      <span class="upload-status" id="upload-status"></span>
+    </div>
+    <div class="progress" id="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <!-- Products -->
+  <div class="products-section">
+    <h2>Your Products</h2>
+    <div id="products-grid" class="products-grid">
+      <div class="empty-products"><div class="icon">📭</div><p>No products yet. Upload your first one above.</p></div>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+<script>
+  // Get company ID from URL: /dashboard/123
+  const companyId = location.pathname.split('/').pop();
+  let maxProducts = 5;
+
+  // Load company data
+  async function loadData() {
+    const res = await fetch(`/api/company/${companyId}`);
+    if (!res.ok) { document.body.innerHTML = '<p style="color:red;padding:2rem">Company not found.</p>'; return; }
+    const data = await res.json();
+    maxProducts = data.maxProducts;
+
+    document.getElementById('company-label').textContent = data.company.name;
+    document.getElementById('view-link').href = `/view/${companyId}`;
+    document.getElementById('stat-products').textContent = data.products.length;
+    document.getElementById('stat-limit').textContent = data.maxProducts;
+    document.getElementById('stat-plan').textContent = data.company.plan;
+
+    if (data.products.length >= data.maxProducts) {
+      const w = document.getElementById('limit-warning');
+      w.style.display = 'block';
+      w.textContent = `Plan limit reached (${data.maxProducts} products). Contact us to upgrade.`;
+      document.getElementById('upload-btn').disabled = true;
+    }
+
+    renderProducts(data.products);
+  }
+
+  function renderProducts(products) {
+    const grid = document.getElementById('products-grid');
+    if (products.length === 0) {
+      grid.innerHTML = '<div class="empty-products"><div class="icon">📭</div><p>No products yet. Upload your first one above.</p></div>';
+      return;
+    }
+    grid.innerHTML = products.map(p => `
+      <div class="product-item">
+        <div class="product-preview">
+          ${p.image_url
+            ? `<img src="${p.image_url}" alt="${p.name}" />`
+            : `<model-viewer src="${p.model_url}" auto-rotate camera-controls environment-image="neutral" shadow-intensity="0.5"></model-viewer>`
+          }
+        </div>
+        <div class="product-body">
+          <h3>${p.name}</h3>
+          <p>${p.description || 'No description'}</p>
+          <div class="product-actions">
+            <a href="/view/${companyId}" class="btn-sm" target="_blank">Preview</a>
+            <button class="btn-sm danger" onclick="deleteProduct(${p.id})">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // File drag & drop helpers
+  function setupDrop(dropEl, inputEl, selectedEl) {
+    dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('dragover'); });
+    dropEl.addEventListener('dragleave', () => dropEl.classList.remove('dragover'));
+    dropEl.addEventListener('drop', e => {
+      e.preventDefault(); dropEl.classList.remove('dragover');
+      inputEl.files = e.dataTransfer.files;
+      selectedEl.textContent = '✓ ' + e.dataTransfer.files[0]?.name;
+    });
+    inputEl.addEventListener('change', () => {
+      selectedEl.textContent = inputEl.files[0] ? '✓ ' + inputEl.files[0].name : '';
+    });
+  }
+  setupDrop(document.getElementById('model-drop'), document.getElementById('model-file'), document.getElementById('model-selected'));
+  setupDrop(document.getElementById('image-drop'), document.getElementById('image-file'), document.getElementById('image-selected'));
+
+  // Upload product
+  async function uploadProduct() {
+    const name = document.getElementById('prod-name').value.trim();
+    const desc = document.getElementById('prod-desc').value.trim();
+    const modelFile = document.getElementById('model-file').files[0];
+    const imageFile = document.getElementById('image-file').files[0];
+    const status = document.getElementById('upload-status');
+    const btn = document.getElementById('upload-btn');
+
+    if (!name) { status.textContent = 'Product name is required.'; status.className = 'upload-status error'; return; }
+    if (!modelFile) { status.textContent = 'A .glb or .gltf model file is required.'; status.className = 'upload-status error'; return; }
+
+    btn.disabled = true;
+    status.textContent = 'Uploading…'; status.className = 'upload-status';
+
+    const form = new FormData();
+    form.append('company_id', companyId);
+    form.append('name', name);
+    form.append('description', desc);
+    form.append('model', modelFile);
+    if (imageFile) form.append('image', imageFile);
+
+    // Show progress bar
+    const progress = document.getElementById('progress');
+    const bar = document.getElementById('progress-bar');
+    progress.style.display = 'block'; bar.style.width = '30%';
+
+    try {
+      const res = await fetch('/api/products', { method: 'POST', body: form });
+      bar.style.width = '100%';
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      status.textContent = '✅ Product uploaded!'; status.className = 'upload-status success';
+      document.getElementById('prod-name').value = '';
+      document.getElementById('prod-desc').value = '';
+      document.getElementById('model-file').value = '';
+      document.getElementById('image-file').value = '';
+      document.getElementById('model-selected').textContent = '';
+      document.getElementById('image-selected').textContent = '';
+
+      setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0'; }, 800);
+      loadData();
+    } catch (err) {
+      bar.style.width = '0'; progress.style.display = 'none';
+      status.textContent = '❌ ' + err.message; status.className = 'upload-status error';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteProduct(productId) {
+    if (!confirm('Delete this product?')) return;
+    await fetch(`/api/products/${productId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_id: companyId })
+    });
+    loadData();
+  }
+
+  loadData();
+</script>
+</body>
+</html>
