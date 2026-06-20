@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Store — View3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#0a0a0f; --surface:#13131a; --border:#222230;
+    --accent:#6c63ff; --accent2:#00d4aa; --text:#e8e8f0; --muted:#7a7a9a;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(10,10,15,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:1rem 1.5rem;}
+  .header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:1rem;}
+  .back-link{color:var(--muted);text-decoration:none;font-size:.875rem;}
+  .back-link:hover{color:var(--text);}
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-left:auto;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
+  .store-banner{background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(0,212,170,.08));border-bottom:1px solid var(--border);padding:2.5rem 1.5rem;}
+  .store-banner-inner{max-width:1100px;margin:0 auto;}
+  .store-avatar{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:#fff;margin-bottom:1rem;}
+  .store-name{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:.3rem;}
+  .store-meta{color:var(--muted);font-size:.85rem;}
+
+  main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.1rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;text-decoration:none;color:var(--text);display:flex;flex-direction:column;transition:border-color .2s, transform .2s;}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .card-media{height:170px;background:#0e0e14;}
+  .card-media img,.card-media model-viewer{width:100%;height:100%;object-fit:cover;}
+  .card-body{padding:.85rem .95rem 1rem;}
+  .card-name{font-size:.9rem;font-weight:600;margin-bottom:.4rem;}
+  .card-price{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent2);}
+
+  .empty-state{text-align:center;padding:4rem 1rem;color:var(--muted);}
+  .empty-state .icon{font-size:2.5rem;margin-bottom:1rem;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="back-link">← Marketplace</a>
+    <div class="logo">View3D</div>
+  </div>
+</header>
+
+<script>
+  const COMPANY = __COMPANY_DATA__;
+  const PRODUCTS = __PRODUCTS_DATA__;
+</script>
+
+<div class="store-banner">
+  <div class="store-banner-inner">
+    <div class="store-avatar" id="avatar"></div>
+    <div class="store-name" id="store-name"></div>
+    <div class="store-meta" id="store-meta"></div>
+  </div>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty" style="display:none;">
+    <div class="icon">📭</div>
+    <p>This store hasn't added any products yet.</p>
+  </div>
+</main>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+<script>
+  document.title = COMPANY.name + ' — View3D Store';
+  document.getElementById('avatar').textContent = COMPANY.name.charAt(0).toUpperCase();
+  document.getElementById('store-name').textContent = COMPANY.name;
+  document.getElementById('store-meta').textContent = `${PRODUCTS.length} product${PRODUCTS.length !== 1 ? 's' : ''} · View in 3D & AR`;
+
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+
+  if (PRODUCTS.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    grid.innerHTML = PRODUCTS.map(p => `
+      <a href="/product/${p.id}" class="card">
+        <div class="card-media">
+          ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" />` : `<model-viewer src="${p.model_url}" auto-rotate camera-controls environment-image="neutral" disable-zoom></model-viewer>`}
+        </div>
+        <div class="card-body">
+          <div class="card-name">${p.name}</div>
+          <div class="card-price">${p.price > 0 ? '$' + parseFloat(p.price).toFixed(2) : 'Inquire'}</div>
+        </div>
+      </a>
+    `).join('');
+  }
+</script>
+</body>
+</html>
