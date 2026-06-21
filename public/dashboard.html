@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -160,6 +160,28 @@
     </div>
   </div>
 
+  <div class="upload-section" id="profile-section">
+    <h2>Store profile</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Address / Location</label>
+        <input type="text" id="store-address" placeholder="e.g. Bole, Addis Ababa" />
+      </div>
+      <div class="field">
+        <label>Phone number</label>
+        <input type="text" id="store-phone" placeholder="e.g. +251 9XX XXX XXX" />
+      </div>
+      <div class="field full">
+        <label>Short bio</label>
+        <textarea id="store-bio" placeholder="e.g. Premium modern furniture crafted locally."></textarea>
+      </div>
+    </div>
+    <div class="submit-row">
+      <button class="btn-upload" id="save-profile-btn" onclick="saveProfile()">Save Profile</button>
+      <span class="upload-status" id="profile-status"></span>
+    </div>
+  </div>
+
   <div class="upload-section">
     <h2>Add a new product</h2>
     <div class="form-grid">
@@ -247,6 +269,10 @@
     document.getElementById('stat-limit').textContent = data.maxProducts;
     document.getElementById('stat-plan').textContent = data.company.plan;
 
+    document.getElementById('store-address').value = data.company.address || '';
+    document.getElementById('store-phone').value = data.company.phone || '';
+    document.getElementById('store-bio').value = data.company.bio || '';
+
     if (data.products.length >= data.maxProducts) {
       const w = document.getElementById('limit-warning');
       w.style.display = 'block';
@@ -255,6 +281,32 @@
     }
 
     renderProducts(data.products);
+  }
+
+  async function saveProfile() {
+    const address = document.getElementById('store-address').value.trim();
+    const phone = document.getElementById('store-phone').value.trim();
+    const bio = document.getElementById('store-bio').value.trim();
+    const status = document.getElementById('profile-status');
+    const btn = document.getElementById('save-profile-btn');
+
+    btn.disabled = true;
+    status.textContent = 'Saving…'; status.className = 'upload-status';
+
+    try {
+      const res = await fetch(`/api/company/${companyId}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, phone, bio })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      status.textContent = '✅ Profile saved!'; status.className = 'upload-status success';
+    } catch (err) {
+      status.textContent = '❌ ' + err.message; status.className = 'upload-status error';
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   function renderProducts(products) {
