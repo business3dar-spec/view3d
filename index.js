@@ -133,13 +133,28 @@ app.get('/api/categories', async (req, res) => {
 
 app.get('/api/company/:id', async (req, res) => {
   try {
-    const company = await db.query('SELECT id, name, plan, payment_status, slug FROM companies WHERE id = $1', [req.params.id]);
+    const company = await db.query('SELECT id, name, plan, payment_status, slug, address, phone, bio FROM companies WHERE id = $1', [req.params.id]);
     if (!company.rows.length) return res.status(404).json({ error: 'Not found' });
     const products = await db.query('SELECT * FROM products WHERE company_id = $1 AND is_active = true ORDER BY created_at DESC', [req.params.id]);
     const limits = await db.query('SELECT max_products FROM plan_limits WHERE plan = $1', [company.rows[0].plan]);
     res.json({ company: company.rows[0], products: products.rows, maxProducts: limits.rows[0]?.max_products || 5 });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update store profile (address, phone, bio) â€” used by the seller dashboard
+app.put('/api/company/:id/profile', async (req, res) => {
+  try {
+    const { address, phone, bio } = req.body;
+    const result = await db.query(
+      `UPDATE companies SET address = $1, phone = $2, bio = $3 WHERE id = $4 AND payment_status = 'approved' RETURNING id, name, slug, address, phone, bio`,
+      [address || null, phone || null, bio || null, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Company not found or not approved' });
+    res.json({ success: true, company: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Update failed' });
   }
 });
 
