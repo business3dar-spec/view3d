@@ -8,36 +8,73 @@
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   :root{
-    --bg:#0a0a0f; --surface:#13131a; --border:#222230;
-    --accent:#6c63ff; --accent2:#00d4aa; --text:#e8e8f0; --muted:#7a7a9a;
+    --bg:#f7f7f9; --surface:#ffffff; --border:#e6e6ec;
+    --accent:#6c63ff; --accent2:#00b894; --text:#1b1b24; --muted:#73738c;
+    --radius:14px;
   }
   body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
 
-  header{position:sticky;top:0;z-index:50;background:rgba(10,10,15,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:1rem 1.5rem;}
-  .header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:1rem;}
-  .back-link{color:var(--muted);text-decoration:none;font-size:.875rem;}
+  /* ── Top nav ───────────────────────────────────────────── */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.9rem 1.5rem;}
+  .header-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;gap:1rem;}
+  .back-link{color:var(--muted);text-decoration:none;font-size:.875rem;font-weight:500;}
   .back-link:hover{color:var(--text);}
-  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-left:auto;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-left:auto;color:var(--accent);}
 
-  .store-banner{background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(0,212,170,.08));border-bottom:1px solid var(--border);padding:2.5rem 1.5rem;}
-  .store-banner-inner{max-width:1100px;margin:0 auto;}
-  .store-avatar{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;color:#fff;margin-bottom:1rem;}
-  .store-name{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:.3rem;}
-  .store-meta{color:var(--muted);font-size:.85rem;}
+  /* ── Store profile header ─────────────────────────────── */
+  .profile{max-width:1140px;margin:0 auto;padding:2.5rem 1.5rem 2rem;}
+  .profile-top{display:flex;align-items:flex-start;gap:1.25rem;flex-wrap:wrap;}
+  .avatar{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;color:#fff;flex-shrink:0;}
+  .profile-text{flex:1;min-width:200px;}
+  .store-name{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1.15;margin-bottom:.35rem;}
+  .store-bio{color:var(--muted);font-size:.95rem;line-height:1.5;max-width:560px;margin-bottom:.85rem;}
+  .meta-tags{display:flex;gap:.6rem;flex-wrap:wrap;}
+  .meta-tag{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:.4rem .85rem;font-size:.8rem;color:var(--text);}
+  .meta-tag .ic{font-size:.9rem;}
 
-  main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 4rem;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.1rem;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;text-decoration:none;color:var(--text);display:flex;flex-direction:column;transition:border-color .2s, transform .2s;}
-  .card:hover{border-color:var(--accent);transform:translateY(-2px);}
-  .card-media{height:170px;background:#0e0e14;}
-  .card-media img,.card-media model-viewer{width:100%;height:100%;object-fit:cover;}
-  .card-body{padding:.85rem .95rem 1rem;}
-  .card-name{font-size:.9rem;font-weight:600;margin-bottom:.4rem;}
-  .card-price{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--accent2);}
+  .profile-stats{display:flex;gap:1.5rem;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);}
+  .stat{font-size:.85rem;color:var(--muted);}
+  .stat b{color:var(--text);font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;display:block;}
+
+  /* ── Product grid ──────────────────────────────────────── */
+  main{max-width:1140px;margin:0 auto;padding:0 1.5rem 4rem;}
+  .section-label{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;margin-bottom:1.1rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.25rem;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s, transform .2s;}
+  .card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px);}
+
+  .card-media{height:200px;background:#f1f1f5;position:relative;}
+  .card-media model-viewer{width:100%;height:100%;--poster-color:transparent;}
+  .card-media .media-fallback{width:100%;height:100%;object-fit:cover;display:block;}
+
+  .card-body{padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.4rem;flex:1;}
+  .card-name{font-size:1rem;font-weight:700;line-height:1.3;}
+  .card-desc{font-size:.825rem;color:var(--muted);line-height:1.5;flex:1;}
+  .card-price{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:var(--accent2);margin-top:.2rem;}
+
+  .ar-cta{
+    margin-top:.7rem;width:100%;border:none;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;font-weight:600;font-size:.875rem;
+    padding:.7rem 1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;
+    transition:opacity .15s;text-decoration:none;
+  }
+  .ar-cta:hover{opacity:.88;}
+  .ar-cta .ic{font-size:1rem;}
+
+  .view-link{text-align:center;font-size:.78rem;color:var(--muted);text-decoration:none;margin-top:.4rem;display:block;}
+  .view-link:hover{color:var(--accent);}
 
   .empty-state{text-align:center;padding:4rem 1rem;color:var(--muted);}
   .empty-state .icon{font-size:2.5rem;margin-bottom:1rem;}
+
+  @media (max-width:640px){
+    .profile{padding:1.75rem 1.25rem 1.5rem;}
+    .store-name{font-size:1.55rem;}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.85rem;}
+    .card-media{height:160px;}
+  }
 </style>
 </head>
 <body>
@@ -54,15 +91,23 @@
   const PRODUCTS = __PRODUCTS_DATA__;
 </script>
 
-<div class="store-banner">
-  <div class="store-banner-inner">
-    <div class="store-avatar" id="avatar"></div>
-    <div class="store-name" id="store-name"></div>
-    <div class="store-meta" id="store-meta"></div>
+<div class="profile">
+  <div class="profile-top">
+    <div class="avatar" id="avatar"></div>
+    <div class="profile-text">
+      <div class="store-name" id="store-name"></div>
+      <p class="store-bio" id="store-bio"></p>
+      <div class="meta-tags" id="meta-tags"></div>
+    </div>
+  </div>
+  <div class="profile-stats">
+    <div class="stat"><b id="stat-count">0</b>Products</div>
+    <div class="stat"><b>3D & AR</b>Every item</div>
   </div>
 </div>
 
 <main>
+  <div class="section-label">All products</div>
   <div class="grid" id="grid"></div>
   <div class="empty-state" id="empty" style="display:none;">
     <div class="icon">📭</div>
@@ -75,7 +120,15 @@
   document.title = COMPANY.name + ' — View3D Store';
   document.getElementById('avatar').textContent = COMPANY.name.charAt(0).toUpperCase();
   document.getElementById('store-name').textContent = COMPANY.name;
-  document.getElementById('store-meta').textContent = `${PRODUCTS.length} product${PRODUCTS.length !== 1 ? 's' : ''} · View in 3D & AR`;
+  document.getElementById('store-bio').textContent = COMPANY.bio || 'Browse our full catalog in interactive 3D and augmented reality.';
+  document.getElementById('stat-count').textContent = PRODUCTS.length;
+
+  // Meta tags: address + phone (only show if present)
+  const tagsEl = document.getElementById('meta-tags');
+  let tagsHtml = '';
+  if (COMPANY.address) tagsHtml += `<span class="meta-tag"><span class="ic">📍</span>${COMPANY.address}</span>`;
+  if (COMPANY.phone)   tagsHtml += `<span class="meta-tag"><span class="ic">📞</span>${COMPANY.phone}</span>`;
+  tagsEl.innerHTML = tagsHtml;
 
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
@@ -83,17 +136,45 @@
   if (PRODUCTS.length === 0) {
     empty.style.display = 'block';
   } else {
-    grid.innerHTML = PRODUCTS.map(p => `
-      <a href="/product/${p.id}" class="card">
+    grid.innerHTML = PRODUCTS.map(p => {
+      const priceLabel = p.price > 0 ? `${parseFloat(p.price).toLocaleString()} ${p.currency || 'USD'}` : 'Price on inquiry';
+      const desc = (p.description || '').slice(0, 90);
+      return `
+      <div class="card">
         <div class="card-media">
-          ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}" loading="lazy" />` : `<model-viewer src="${p.model_url}" auto-rotate camera-controls environment-image="neutral" disable-zoom></model-viewer>`}
+          <model-viewer
+            src="${p.model_url}"
+            ${p.image_url ? `poster="${p.image_url}"` : ''}
+            alt="${p.name}"
+            camera-controls
+            auto-rotate
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            shadow-intensity="1"
+            environment-image="neutral"
+            disable-zoom
+          ></model-viewer>
         </div>
         <div class="card-body">
           <div class="card-name">${p.name}</div>
-          <div class="card-price">${p.price > 0 ? '$' + parseFloat(p.price).toFixed(2) : 'Inquire'}</div>
+          <div class="card-desc">${desc}</div>
+          <div class="card-price">${priceLabel}</div>
+          <button class="ar-cta" onclick="launchAR(this)" data-product-id="${p.id}">
+            <span class="ic">📱</span> View in Your Space
+          </button>
+          <a href="/product/${p.id}" class="view-link">Full details →</a>
         </div>
-      </a>
-    `).join('');
+      </div>
+    `;
+    }).join('');
+  }
+
+  function launchAR(btn) {
+    const card = btn.closest('.card');
+    const mv = card.querySelector('model-viewer');
+    if (mv && typeof mv.activateAR === 'function') {
+      mv.activateAR();
+    }
   }
 </script>
 </body>
