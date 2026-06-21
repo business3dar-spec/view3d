@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product — View3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --cream:#FAF7F2; --surface:#FFFFFF; --ink:#3A2E26; --ink-soft:#6B5D52;
+    --oak:#8B6F4E; --oak-deep:#6F5538; --sage:#6B8F71; --sage-deep:#52735A;
+    --line:#E8E1D6; --line-soft:#F0EBE2;
+    --serif:'Fraunces',serif; --sans:'Inter',sans-serif;
+  }
+  body{background:var(--cream);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(250,247,242,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:1.1rem 2rem;}
+  .header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:1rem;}
+  .back-link{color:var(--ink-soft);text-decoration:none;font-size:.85rem;font-weight:500;}
+  .back-link:hover{color:var(--ink);}
+  .logo{font-family:var(--serif);font-weight:600;font-size:1.15rem;margin-left:auto;}
+
+  main{max-width:1100px;margin:0 auto;padding:2.5rem 2rem 5rem;}
+  .layout{display:grid;grid-template-columns:1.15fr 1fr;gap:3rem;}
+  @media (max-width:800px){.layout{grid-template-columns:1fr;gap:1.75rem;}}
+
+  .viewer-box{background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden;position:relative;}
+  model-viewer{width:100%;height:460px;background:var(--line-soft);}
+  .ar-badge{position:absolute;top:1rem;right:1rem;width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:700;color:var(--oak-deep);box-shadow:0 2px 6px rgba(0,0,0,.08);z-index:2;}
+  .viewer-controls{padding:.9rem 1.1rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;}
+  .hint{font-size:.76rem;color:var(--ink-soft);}
+  .ar-btn{background:var(--sage);color:#fff;border:none;padding:.55rem 1.3rem;border-radius:3px;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .2s;}
+  .ar-btn:hover{background:var(--sage-deep);}
+
+  .info{display:flex;flex-direction:column;}
+  .store-eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sage-deep);margin-bottom:.6rem;}
+  .store-link{font-size:.85rem;color:var(--oak-deep);text-decoration:none;margin-bottom:1rem;display:inline-block;font-weight:500;}
+  .store-link:hover{text-decoration:underline;}
+  .product-name{font-family:var(--serif);font-size:2rem;font-weight:500;line-height:1.18;letter-spacing:-.01em;margin-bottom:.75rem;}
+  .price{font-family:var(--serif);font-size:1.85rem;font-weight:600;color:var(--ink);margin-bottom:1.4rem;}
+  .desc{color:var(--ink-soft);font-size:.95rem;line-height:1.75;margin-bottom:1.75rem;}
+  .category-tag{display:inline-block;background:var(--line-soft);border:1px solid var(--line);color:var(--ink-soft);font-size:.75rem;font-weight:500;padding:.35rem .8rem;border-radius:999px;margin-bottom:1.4rem;width:fit-content;}
+
+  .contact-box{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1.3rem 1.5rem;margin-top:auto;}
+  .contact-box h3{font-family:var(--serif);font-size:1rem;font-weight:500;margin-bottom:.5rem;}
+  .contact-box p{font-size:.85rem;color:var(--ink-soft);line-height:1.6;}
+  .contact-box a{color:var(--oak-deep);text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="back-link">← Marketplace</a>
+    <div class="logo">View3D</div>
+  </div>
+</header>
+
+<script>const PRODUCT = __PRODUCT_DATA__;</script>
+
+<main>
+  <div class="layout">
+    <div class="viewer-box">
+      <div class="ar-badge">AR</div>
+      <model-viewer id="mv" src="" alt="" camera-controls auto-rotate shadow-intensity="1" environment-image="neutral" ar ar-modes="webxr scene-viewer quick-look"></model-viewer>
+      <div class="viewer-controls">
+        <span class="hint">Drag to rotate · Scroll to zoom</span>
+        <button class="ar-btn" id="ar-btn" style="display:none;">View in AR</button>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="store-eyebrow">Showcase piece</div>
+      <a id="store-link" href="#" class="store-link"></a>
+      <div class="category-tag" id="cat-tag"></div>
+      <h1 class="product-name" id="p-name"></h1>
+      <div class="price" id="p-price"></div>
+      <p class="desc" id="p-desc"></p>
+
+      <div class="contact-box">
+        <h3>Interested in this piece?</h3>
+        <p id="contact-text">Visit the seller's store page to see their full catalog and contact details.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+<script>
+  const CATEGORY_LABELS = {
+    furniture: 'Furniture', fashion: 'Fashion', shoes: 'Shoes',
+    electronics: 'Electronics', jewelry: 'Jewelry', toys: 'Toys',
+    home: 'Home', other: 'Other'
+  };
+
+  document.title = PRODUCT.name + ' — View3D';
+  document.getElementById('p-name').textContent = PRODUCT.name;
+  document.getElementById('p-desc').textContent = PRODUCT.description || 'No description provided.';
+  document.getElementById('p-price').textContent = PRODUCT.price > 0 ? '$' + parseFloat(PRODUCT.price).toFixed(2) : 'Price on inquiry';
+  document.getElementById('cat-tag').textContent = CATEGORY_LABELS[PRODUCT.category] || 'Other';
+  document.getElementById('store-link').textContent = `Sold by ${PRODUCT.company_name} →`;
+  document.getElementById('store-link').href = `/store/${PRODUCT.company_slug}`;
+  document.getElementById('contact-text').innerHTML = `Visit <a href="/store/${PRODUCT.company_slug}">${PRODUCT.company_name}'s store</a> to see their full catalog.`;
+
+  const mv = document.getElementById('mv');
+  mv.setAttribute('src', PRODUCT.model_url);
+  mv.setAttribute('alt', PRODUCT.name);
+  if (PRODUCT.image_url) mv.setAttribute('poster', PRODUCT.image_url);
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const arBtn = document.getElementById('ar-btn');
+
+  if (isIOS) {
+    arBtn.style.display = 'inline-block';
+    arBtn.onclick = () => mv.activateAR();
+  } else if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+      if (supported) { arBtn.style.display = 'inline-block'; arBtn.onclick = () => mv.activateAR(); }
+    }).catch(() => {});
+  }
+</script>
+</body>
+</html>
