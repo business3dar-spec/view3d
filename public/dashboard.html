@@ -1,4 +1,4 @@
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -164,12 +164,23 @@ DOCTYPE html>
     <h2>Store profile</h2>
     <div class="form-grid">
       <div class="field">
-        <label>Address / Location</label>
-        <input type="text" id="store-address" placeholder="e.g. Bole, Addis Ababa" />
+        <label>Business type</label>
+        <select id="store-type">
+          <option value="restaurant">🍽 Restaurant</option>
+          <option value="furniture">🪑 Furniture Store</option>
+          <option value="electronics">📱 Electronics Store</option>
+          <option value="fashion">👗 Fashion Store</option>
+          <option value="lighting">💡 Lighting Store</option>
+          <option value="other">📦 Other</option>
+        </select>
       </div>
       <div class="field">
         <label>Phone number</label>
         <input type="text" id="store-phone" placeholder="e.g. +251 9XX XXX XXX" />
+      </div>
+      <div class="field full">
+        <label>Address / Location</label>
+        <input type="text" id="store-address" placeholder="e.g. Bole, Addis Ababa" />
       </div>
       <div class="field full">
         <label>Short bio</label>
@@ -193,12 +204,10 @@ DOCTYPE html>
         <label>Category *</label>
         <select id="prod-category">
           <option value="furniture">🪑 Furniture</option>
-          <option value="fashion">👗 Fashion</option>
-          <option value="shoes">👟 Shoes</option>
+          <option value="restaurant">🍽 Restaurant Food</option>
           <option value="electronics">📱 Electronics</option>
-          <option value="jewelry">💎 Jewelry</option>
-          <option value="toys">🧸 Toys</option>
-          <option value="home">🏠 Home</option>
+          <option value="lighting">💡 Lighting</option>
+          <option value="fashion">👗 Fashion</option>
           <option value="other">📦 Other</option>
         </select>
       </div>
@@ -252,9 +261,8 @@ DOCTYPE html>
   const companyId = location.pathname.split('/').pop();
   let maxProducts = 5;
   const CATEGORY_LABELS = {
-    furniture: '🪑 Furniture', fashion: '👗 Fashion', shoes: '👟 Shoes',
-    electronics: '📱 Electronics', jewelry: '💎 Jewelry', toys: '🧸 Toys',
-    home: '🏠 Home', other: '📦 Other'
+    furniture: '🪑 Furniture', restaurant: '🍽 Restaurant Food', electronics: '📱 Electronics',
+    lighting: '💡 Lighting', fashion: '👗 Fashion', other: '📦 Other'
   };
 
   async function loadData() {
@@ -264,7 +272,7 @@ DOCTYPE html>
     maxProducts = data.maxProducts;
 
     document.getElementById('company-label').textContent = data.company.name;
-    document.getElementById('store-link').href = `/store/${data.company.slug}`;
+    document.getElementById('store-link').href = `/${data.company.slug}`;
     document.getElementById('stat-products').textContent = data.products.length;
     document.getElementById('stat-limit').textContent = data.maxProducts;
     document.getElementById('stat-plan').textContent = data.company.plan;
@@ -272,6 +280,7 @@ DOCTYPE html>
     document.getElementById('store-address').value = data.company.address || '';
     document.getElementById('store-phone').value = data.company.phone || '';
     document.getElementById('store-bio').value = data.company.bio || '';
+    document.getElementById('store-type').value = data.company.business_type || 'other';
 
     if (data.products.length >= data.maxProducts) {
       const w = document.getElementById('limit-warning');
@@ -287,6 +296,7 @@ DOCTYPE html>
     const address = document.getElementById('store-address').value.trim();
     const phone = document.getElementById('store-phone').value.trim();
     const bio = document.getElementById('store-bio').value.trim();
+    const business_type = document.getElementById('store-type').value;
     const status = document.getElementById('profile-status');
     const btn = document.getElementById('save-profile-btn');
 
@@ -297,7 +307,7 @@ DOCTYPE html>
       const res = await fetch(`/api/company/${companyId}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, phone, bio })
+        body: JSON.stringify({ address, phone, bio, business_type })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
