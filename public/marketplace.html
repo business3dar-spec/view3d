@@ -1,194 +1,221 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>View3D — Shop in 3D & AR</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>View3D — See Products in 3D & AR Before You Buy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   :root{
-    --cream:#FAF7F2; --surface:#FFFFFF; --ink:#3A2E26; --ink-soft:#6B5D52;
-    --oak:#8B6F4E; --oak-deep:#6F5538; --sage:#6B8F71; --sage-deep:#52735A;
-    --line:#E8E1D6; --line-soft:#F0EBE2;
-    --serif:'Fraunces',serif; --sans:'Inter',sans-serif;
+    --bg:#f5f4f2; --surface:#ffffff; --ink:#1b1b1f; --muted:#6b6b75;
+    --line:#e6e4e1; --accent:#2f6b3f; --accent-soft:#e8f1ea; --badge:#2f6b3f;
+    --price:#1b1b1f;
   }
-  body{background:var(--cream);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
-  a{color:inherit;}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
 
-  /* ── Nav ───────────────────────────────────────────────── */
-  header{position:sticky;top:0;z-index:50;background:rgba(250,247,242,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
-  .nav-inner{max-width:1240px;margin:0 auto;padding:1.1rem 2rem;display:flex;align-items:center;gap:1.75rem;}
-  .logo{font-family:var(--serif);font-weight:600;font-size:1.35rem;letter-spacing:-.01em;flex-shrink:0;}
-  .search-bar{flex:1;display:flex;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.6rem 1.1rem;max-width:380px;}
-  .search-bar input{background:none;border:none;outline:none;font-size:.85rem;width:100%;font-family:var(--sans);color:var(--ink);}
-  .search-bar input::placeholder{color:#A89C8E;}
-  .sell-link{margin-left:auto;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--surface);background:var(--ink);padding:.6rem 1.3rem;border-radius:999px;text-decoration:none;white-space:nowrap;transition:background .2s;}
-  .sell-link:hover{background:var(--oak-deep);}
+  header{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--line);}
+  .top-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;max-width:1200px;margin:0 auto;}
+  .logo{font-weight:800;font-size:1.05rem;letter-spacing:-.01em;}
+  .sell-btn{background:var(--accent);color:#fff;font-size:.78rem;font-weight:700;padding:.45rem .9rem;border-radius:6px;}
 
-  .cat-rail{display:flex;gap:.5rem;overflow-x:auto;padding:.85rem 2rem 1rem;max-width:1240px;margin:0 auto;scrollbar-width:none;}
+  .hero{background:var(--surface);border-bottom:1px solid var(--line);padding:1.1rem 1rem 1.3rem;}
+  .hero-inner{max-width:1200px;margin:0 auto;}
+  .hero h1{font-size:1.3rem;font-weight:800;line-height:1.25;letter-spacing:-.01em;margin-bottom:.35rem;}
+  .hero p{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:.95rem;max-width:480px;}
+  .search-wrap{position:relative;}
+  .search-wrap input{
+    width:100%;padding:.85rem 1rem .85rem 2.6rem;border:1.5px solid var(--line);border-radius:9px;
+    font-size:.92rem;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg);outline:none;
+  }
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap .icon{position:absolute;left:.95rem;top:50%;transform:translateY(-50%);font-size:1rem;opacity:.45;}
+
+  .cat-rail{display:flex;gap:.5rem;overflow-x:auto;padding:.8rem 1rem;max-width:1200px;margin:0 auto;scrollbar-width:none;background:var(--surface);border-bottom:1px solid var(--line);}
   .cat-rail::-webkit-scrollbar{display:none;}
-  .cat-pill{flex-shrink:0;font-size:.78rem;font-weight:500;padding:.42rem .95rem;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;white-space:nowrap;transition:all .15s;}
+  .cat-pill{flex-shrink:0;font-size:.78rem;font-weight:600;padding:.42rem .9rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;}
   .cat-pill.active{background:var(--ink);border-color:var(--ink);color:#fff;}
-  .cat-pill:hover:not(.active){border-color:var(--oak);color:var(--ink);}
-  .cat-count{opacity:.55;font-size:.7rem;margin-left:.25rem;}
+  .cat-count{opacity:.6;font-size:.7rem;margin-left:.2rem;}
 
-  /* ── Hero ──────────────────────────────────────────────── */
-  .hero{max-width:1240px;margin:0 auto;padding:3.5rem 2rem 2.5rem;text-align:center;}
-  .hero-eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--sage-deep);margin-bottom:1rem;}
-  .hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(2.1rem,4.5vw,3.4rem);line-height:1.08;letter-spacing:-.01em;margin-bottom:.85rem;max-width:760px;margin-left:auto;margin-right:auto;}
-  .hero p{font-size:1rem;color:var(--ink-soft);max-width:480px;margin:0 auto;line-height:1.6;}
+  main{max-width:1200px;margin:0 auto;padding:1rem .7rem 4rem;}
 
-  main{max-width:1240px;margin:0 auto;padding:0 2rem 5rem;}
+  .section-title{font-size:.95rem;font-weight:800;padding:0 .55rem;margin-bottom:.65rem;display:flex;align-items:baseline;justify-content:space-between;}
+  .section-title span.count{font-size:.74rem;font-weight:500;color:var(--muted);}
 
-  /* ── Grid ──────────────────────────────────────────────── */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.75rem;}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;transition:box-shadow .25s, transform .25s;}
-  .card:hover{box-shadow:0 18px 40px -12px rgba(58,46,38,.18);transform:translateY(-3px);}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem;margin-bottom:1.75rem;}
+  @media (min-width:560px){ .grid{grid-template-columns:repeat(3,1fr);} }
+  @media (min-width:820px){ .grid{grid-template-columns:repeat(4,1fr);} }
+  @media (min-width:1080px){ .grid{grid-template-columns:repeat(5,1fr);} }
 
-  .card-media{height:230px;background:var(--line-soft);position:relative;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s;}
+  .card:active, .card:hover{box-shadow:0 4px 14px rgba(0,0,0,.07);}
+
+  .card-media{aspect-ratio:1/1;background:#eeece8;position:relative;}
   .card-media model-viewer{width:100%;height:100%;--poster-color:transparent;}
-  .ar-badge{position:absolute;top:.75rem;right:.75rem;width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;letter-spacing:.02em;color:var(--oak-deep);box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .badge-row{position:absolute;top:.4rem;left:.4rem;display:flex;gap:.3rem;}
+  .badge{font-size:.6rem;font-weight:800;padding:.18rem .4rem;border-radius:4px;color:#fff;letter-spacing:.02em;}
+  .badge.b3d{background:var(--badge);}
+  .badge.bar{background:#1b1b1f;}
 
-  .card-body{padding:1.15rem 1.25rem 1.35rem;display:flex;flex-direction:column;gap:.3rem;flex:1;}
-  .card-store{font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--sage-deep);}
-  .card-name{font-family:var(--serif);font-size:1.05rem;font-weight:500;line-height:1.3;margin-top:.1rem;}
-  .card-desc{font-size:.78rem;color:var(--ink-soft);line-height:1.5;flex:1;margin-top:.15rem;}
-  .card-price-row{display:flex;align-items:baseline;justify-content:space-between;margin-top:.55rem;padding-top:.55rem;border-top:1px solid var(--line-soft);}
-  .card-price{font-family:var(--serif);font-weight:600;font-size:1.15rem;color:var(--ink);}
-  .card-cta{font-size:.72rem;font-weight:600;color:var(--oak-deep);}
+  .card-body{padding:.55rem .6rem .7rem;display:flex;flex-direction:column;gap:.18rem;}
+  .card-price{font-weight:800;font-size:.92rem;color:var(--price);}
+  .card-name{font-size:.78rem;font-weight:500;color:var(--ink);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-desc{font-size:.68rem;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card-store{font-size:.68rem;color:var(--accent);font-weight:600;margin-top:.1rem;}
 
-  .empty-state{text-align:center;padding:5rem 1rem;color:var(--ink-soft);}
-  .empty-state .icon{font-size:2.2rem;margin-bottom:1rem;opacity:.6;}
+  .biz-row{display:flex;gap:.6rem;overflow-x:auto;padding-bottom:.4rem;margin-bottom:1.75rem;scrollbar-width:none;}
+  .biz-row::-webkit-scrollbar{display:none;}
+  .biz-chip{flex-shrink:0;width:130px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:.8rem .7rem;text-align:center;}
+  .biz-avatar{width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;margin:0 auto .5rem;}
+  .biz-name{font-size:.76rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .biz-count{font-size:.65rem;color:var(--muted);margin-top:.15rem;}
 
-  footer{border-top:1px solid var(--line);padding:2.5rem 2rem;text-align:center;font-size:.78rem;color:var(--ink-soft);}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);}
+  .empty-state .icon{font-size:2rem;margin-bottom:.75rem;opacity:.5;}
 
-  @media (max-width:640px){
-    .nav-inner{flex-wrap:wrap;gap:.85rem;}
-    .search-bar{order:3;max-width:100%;}
-    .sell-link{order:2;margin-left:auto;}
-    .hero{padding:2.5rem 1.5rem 1.75rem;}
-    .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem;}
-    .card-media{height:160px;}
-  }
+  footer{border-top:1px solid var(--line);padding:1.5rem 1rem;text-align:center;font-size:.74rem;color:var(--muted);}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="nav-inner">
+  <div class="top-row">
     <div class="logo">View3D</div>
-    <div class="search-bar">
-      <span style="opacity:.5;">⌕</span>
-      <input type="text" id="search-input" placeholder="Search products…" />
-    </div>
-    <a href="#" class="sell-link" onclick="return showSellInfo()">Sell on View3D</a>
-  </div>
-  <div class="cat-rail" id="cat-rail">
-    <div class="cat-pill active" data-cat="all">All</div>
+    <a href="/register" class="sell-btn">Sell on View3D</a>
   </div>
 </header>
 
 <div class="hero">
-  <div class="hero-eyebrow">3D · Augmented Reality</div>
-  <h1>See it in your space, before it's in your space</h1>
-  <p>Every product here can be rotated, examined, and placed in your room in AR — right from your phone.</p>
+  <div class="hero-inner">
+    <h1>See Products in 3D &amp; AR Before You Buy</h1>
+    <p>Rotate every product, then place it right in your room using AR — all from your phone, before you decide.</p>
+    <div class="search-wrap">
+      <span class="icon">⌕</span>
+      <input type="text" id="search-input" placeholder="Search products, businesses, categories…" />
+    </div>
+  </div>
+</div>
+
+<div class="cat-rail" id="cat-rail">
+  <div class="cat-pill active" data-cat="all">All</div>
 </div>
 
 <main>
-  <div class="grid" id="grid"></div>
-  <div class="empty-state" id="empty" style="display:none;">
-    <div class="icon">◯</div>
-    <p>No products yet in this category.</p>
-  </div>
+  <div id="content-area"></div>
 </main>
 
-<footer>© 2026 View3D Marketplace — A new way to shop, in three dimensions.</footer>
+<footer>© 2026 View3D Marketplace</footer>
 
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
 <script>
   const CATEGORY_LABELS = {
-    furniture: 'Furniture', fashion: 'Fashion', shoes: 'Shoes',
-    electronics: 'Electronics', jewelry: 'Jewelry', toys: 'Toys',
-    home: 'Home', other: 'Other'
+    furniture: 'Furniture', restaurant: 'Restaurant Food', electronics: 'Electronics',
+    lighting: 'Lighting', fashion: 'Fashion', other: 'Other'
   };
 
   let allProducts = [];
   let currentCategory = 'all';
+  let currentQuery = '';
 
-  async function loadCategories() {
-    const res = await fetch('/api/categories');
-    const data = await res.json();
-    const rail = document.getElementById('cat-rail');
-    data.categories.forEach(c => {
-      const pill = document.createElement('div');
-      pill.className = 'cat-pill';
-      pill.dataset.cat = c.category;
-      pill.innerHTML = `${CATEGORY_LABELS[c.category] || c.category} <span class="cat-count">${c.count}</span>`;
-      pill.addEventListener('click', () => selectCategory(c.category, pill));
-      rail.appendChild(pill);
+  function cardHtml(p) {
+    const hasModel = !!p.model_url;
+    const desc = (p.description || '').slice(0, 60);
+    const priceLabel = p.price > 0 ? '$' + parseFloat(p.price).toFixed(2) : 'Inquire';
+    const mediaHtml = hasModel
+      ? '<model-viewer src="' + p.model_url + '" ' + (p.image_url ? 'poster="' + p.image_url + '"' : '') + ' auto-rotate camera-controls environment-image="neutral" disable-zoom></model-viewer>'
+      : (p.image_url ? '<img src="' + p.image_url + '" alt="' + p.name + '" style="width:100%;height:100%;object-fit:cover;" />' : '');
+    return (
+      '<a href="/product/' + p.id + '" class="card">' +
+        '<div class="card-media">' + mediaHtml +
+          '<div class="badge-row">' +
+            (hasModel ? '<span class="badge b3d">3D</span>' : '') +
+            (hasModel ? '<span class="badge bar">AR</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<div class="card-price">' + priceLabel + '</div>' +
+          '<div class="card-name">' + p.name + '</div>' +
+          '<div class="card-desc">' + desc + '</div>' +
+          '<div class="card-store">' + p.company_name + '</div>' +
+        '</div>' +
+      '</a>'
+    );
+  }
+
+  function renderProductGrid(products, title) {
+    if (!products.length) return '';
+    return '<div class="section-title">' + title + ' <span class="count">' + products.length + '</span></div>' +
+           '<div class="grid">' + products.map(cardHtml).join('') + '</div>';
+  }
+
+  function renderBusinessRow(businesses) {
+    if (!businesses.length) return '';
+    const chips = businesses.map(function(b) {
+      return '<a href="/' + b.slug + '" class="biz-chip">' +
+        '<div class="biz-avatar">' + b.name.charAt(0).toUpperCase() + '</div>' +
+        '<div class="biz-name">' + b.name + '</div>' +
+        '<div class="biz-count">' + b.product_count + ' item' + (b.product_count == 1 ? '' : 's') + '</div>' +
+      '</a>';
+    }).join('');
+    return '<div class="section-title">Popular businesses</div><div class="biz-row">' + chips + '</div>';
+  }
+
+  function loadCategories() {
+    fetch('/api/categories').then(function(res) { return res.json(); }).then(function(data) {
+      const rail = document.getElementById('cat-rail');
+      data.categories.forEach(function(c) {
+        const pill = document.createElement('div');
+        pill.className = 'cat-pill';
+        pill.dataset.cat = c.category;
+        pill.innerHTML = (CATEGORY_LABELS[c.category] || c.category) + ' <span class="cat-count">' + c.count + '</span>';
+        pill.addEventListener('click', function() { selectCategory(c.category, pill); });
+        rail.appendChild(pill);
+      });
     });
   }
 
   function selectCategory(cat, el) {
     currentCategory = cat;
-    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.cat-pill').forEach(function(p) { p.classList.remove('active'); });
     el.classList.add('active');
-    loadProducts();
+    loadAndRender();
   }
 
-  document.querySelector('.cat-pill[data-cat="all"]').addEventListener('click', (e) => selectCategory('all', e.currentTarget));
+  document.querySelector('.cat-pill[data-cat="all"]').addEventListener('click', function(e) { selectCategory('all', e.currentTarget); });
 
-  async function loadProducts() {
-    const url = currentCategory === 'all' ? '/api/products' : `/api/products?category=${currentCategory}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    allProducts = data.products;
-    renderGrid(allProducts);
+  function loadAndRender() {
+    const params = new URLSearchParams();
+    if (currentCategory !== 'all') params.set('category', currentCategory);
+    if (currentQuery) params.set('q', currentQuery);
+
+    fetch('/api/products?' + params.toString()).then(function(res) { return res.json(); }).then(function(data) {
+      allProducts = data.products;
+      const area = document.getElementById('content-area');
+
+      if (allProducts.length > 0) {
+        area.innerHTML = renderProductGrid(allProducts, (currentQuery || currentCategory !== 'all') ? 'Results' : 'All products');
+        return;
+      }
+
+      fetch('/api/discover').then(function(r) { return r.json(); }).then(function(discover) {
+        let html = '<div class="empty-state"><div class="icon">◯</div><p>No matches yet — here\'s what\'s new on View3D.</p></div>';
+        html += renderBusinessRow(discover.businesses);
+        html += renderProductGrid(discover.recent, 'Recently added');
+        area.innerHTML = html;
+      });
+    });
   }
 
-  function renderGrid(products) {
-    const grid = document.getElementById('grid');
-    const empty = document.getElementById('empty');
-    if (products.length === 0) {
-      grid.innerHTML = '';
-      empty.style.display = 'block';
-      return;
-    }
-    empty.style.display = 'none';
-    grid.innerHTML = products.map(p => `
-      <a href="/product/${p.id}" class="card">
-        <div class="card-media">
-          <model-viewer src="${p.model_url}" ${p.image_url ? `poster="${p.image_url}"` : ''} auto-rotate camera-controls environment-image="neutral" disable-zoom></model-viewer>
-          <div class="ar-badge">AR</div>
-        </div>
-        <div class="card-body">
-          <div class="card-store">${p.company_name}</div>
-          <div class="card-name">${p.name}</div>
-          <div class="card-desc">${(p.description || '').slice(0,70)}</div>
-          <div class="card-price-row">
-            <div class="card-price">${p.price > 0 ? '$' + parseFloat(p.price).toFixed(2) : 'Inquire'}</div>
-            <div class="card-cta">View in 3D →</div>
-          </div>
-        </div>
-      </a>
-    `).join('');
-  }
-
-  document.getElementById('search-input').addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase();
-    const filtered = allProducts.filter(p => p.name.toLowerCase().includes(q) || p.company_name.toLowerCase().includes(q));
-    renderGrid(filtered);
+  let searchTimer;
+  document.getElementById('search-input').addEventListener('input', function(e) {
+    clearTimeout(searchTimer);
+    currentQuery = e.target.value.trim();
+    searchTimer = setTimeout(loadAndRender, 250);
   });
 
-  function showSellInfo() {
-    alert('To sell on View3D, message our Telegram bot and send: /register Your Company Name');
-    return false;
-  }
-
   loadCategories();
-  loadProducts();
+  loadAndRender();
 </script>
 </body>
 </html>
