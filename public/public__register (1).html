@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Register your business — View3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#f5f4f2; --surface:#fff; --ink:#1b1b1f; --muted:#6b6b75;
+    --line:#e3e1de; --accent:#2f6b3f; --accent-deep:#22512f; --danger:#c0392b;
+  }
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;min-height:100vh;}
+
+  header{padding:1rem 1.25rem;border-bottom:1px solid var(--line);background:var(--surface);}
+  .logo{font-weight:700;font-size:1.05rem;}
+  a.back{color:var(--muted);text-decoration:none;font-size:.82rem;display:inline-block;margin-bottom:.5rem;}
+
+  main{max-width:480px;margin:0 auto;padding:1.5rem 1.25rem 4rem;}
+  h1{font-size:1.4rem;font-weight:700;margin-bottom:.4rem;}
+  .sub{color:var(--muted);font-size:.88rem;margin-bottom:1.75rem;line-height:1.5;}
+
+  form{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1.25rem;}
+  .field{margin-bottom:1.1rem;}
+  label{display:block;font-size:.8rem;font-weight:600;margin-bottom:.4rem;}
+  input, select{
+    width:100%;padding:.7rem .85rem;border:1px solid var(--line);border-radius:7px;
+    font-size:.9rem;font-family:'Inter',sans-serif;color:var(--ink);background:var(--bg);outline:none;
+  }
+  input:focus, select:focus{border-color:var(--accent);}
+
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+  .type-option{
+    border:1px solid var(--line);border-radius:7px;padding:.65rem .5rem;text-align:center;
+    font-size:.8rem;font-weight:500;cursor:pointer;background:var(--bg);transition:all .15s;
+  }
+  .type-option.selected{border-color:var(--accent);background:rgba(47,107,63,.08);color:var(--accent-deep);font-weight:700;}
+
+  .submit-btn{
+    width:100%;background:var(--accent);color:#fff;border:none;padding:.85rem;border-radius:8px;
+    font-size:.92rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:background .15s;
+  }
+  .submit-btn:hover{background:var(--accent-deep);}
+  .submit-btn:disabled{opacity:.55;cursor:not-allowed;}
+
+  .status-msg{margin-top:1rem;font-size:.85rem;text-align:center;}
+  .status-msg.error{color:var(--danger);}
+  .status-msg.success{color:var(--accent-deep);}
+
+  .success-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1.5rem;text-align:center;}
+  .success-box .check{font-size:2.2rem;margin-bottom:.6rem;}
+  .success-box h2{font-size:1.1rem;margin-bottom:.5rem;}
+  .success-box p{font-size:.85rem;color:var(--muted);line-height:1.6;}
+
+  .alt-note{margin-top:1.25rem;text-align:center;font-size:.8rem;color:var(--muted);}
+  .alt-note a{color:var(--accent-deep);font-weight:600;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="back">← Marketplace</a>
+  <div class="logo">View3D</div>
+</header>
+
+<main>
+  <h1>List your business</h1>
+  <p class="sub">Show your products in 3D & AR. Fill this out and we'll review your application — usually within a few hours.</p>
+
+  <form id="reg-form">
+    <div class="field">
+      <label>Business name *</label>
+      <input type="text" id="biz-name" placeholder="e.g. Modern Furniture Co." required />
+    </div>
+    <div class="field">
+      <label>Email *</label>
+      <input type="email" id="biz-email" placeholder="you@business.com" required />
+    </div>
+    <div class="field">
+      <label>Phone number</label>
+      <input type="text" id="biz-phone" placeholder="+251 9XX XXX XXX" />
+    </div>
+    <div class="field">
+      <label>Business type *</label>
+      <div class="type-grid" id="type-grid">
+        <div class="type-option" data-type="restaurant">🍽 Restaurant</div>
+        <div class="type-option" data-type="furniture">🪑 Furniture</div>
+        <div class="type-option" data-type="electronics">📱 Electronics</div>
+        <div class="type-option" data-type="fashion">👗 Fashion</div>
+        <div class="type-option" data-type="lighting">💡 Lighting</div>
+        <div class="type-option" data-type="other">📦 Other</div>
+      </div>
+    </div>
+    <button type="submit" class="submit-btn" id="submit-btn">Submit application</button>
+    <div class="status-msg" id="status-msg"></div>
+  </form>
+
+  <div class="success-box" id="success-box" style="display:none;">
+    <div class="check">✅</div>
+    <h2>Application received</h2>
+    <p>We'll review your business and notify you once approved. Check back here or watch for a message if you registered via Telegram too.</p>
+  </div>
+
+  <p class="alt-note">Prefer Telegram? Message our bot and send <a href="#" onclick="alert('Search for our bot on Telegram and send /register Your Business Name'); return false;">/register Your Business Name</a></p>
+</main>
+
+<script>
+  let selectedType = null;
+  document.querySelectorAll('.type-option').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.type-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedType = el.dataset.type;
+    });
+  });
+
+  document.getElementById('reg-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('biz-name').value.trim();
+    const email = document.getElementById('biz-email').value.trim();
+    const phone = document.getElementById('biz-phone').value.trim();
+    const status = document.getElementById('status-msg');
+    const btn = document.getElementById('submit-btn');
+
+    if (!selectedType) {
+      status.textContent = 'Please select a business type.';
+      status.className = 'status-msg error';
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = 'Submitting…';
+    status.className = 'status-msg';
+
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, business_type: selectedType })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      document.getElementById('reg-form').style.display = 'none';
+      document.getElementById('success-box').style.display = 'block';
+    } catch (err) {
+      status.textContent = '❌ ' + err.message;
+      status.className = 'status-msg error';
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
