@@ -26,8 +26,11 @@ app.use(session({
 }));
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, file.fieldname === 'model' ? 'uploads/models' : 'uploads/images'),
-  filename:    (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random()*1e6) + path.extname(file.originalname))
+  destination: (req, file, cb) => {
+    if (file.fieldname === 'model') return cb(null, 'uploads/models');
+    return cb(null, 'uploads/images');
+  },
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random()*1e6) + path.extname(file.originalname))
 });
 const upload = multer({ storage, limits: { fileSize: 50*1024*1024 } });
 
@@ -41,16 +44,29 @@ function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 }
 
+async function uniqueSlug(name) {
+  const base = slugify(name);
+  let slug = base, n = 1;
+  while ((await db.query('SELECT id FROM companies WHERE slug = $1', [slug])).rows.length) {
+    slug = `${base}-${n}`; n++;
+  }
+  return slug;
+}
+
+const RESERVED_SLUGS = ['product', 'dashboard', 'store', 'view', 'register', 'api', 'uploads', 'blocked', '404'];
+
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  PAGES
+//  PAGES â€” fixed-path routes first, catch-all /:slug goes last
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// Marketplace homepage â€” all products, all companies
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'marketplace.html'));
 });
 
-// Single product page (3D viewer + price + description)
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
 app.get('/product/:id', async (req, res) => {
   const r = await db.query(
     `SELECT p.*, c.name AS company_name, c.slug AS company_slug
@@ -64,26 +80,14 @@ app.get('/product/:id', async (req, res) => {
   res.send(html);
 });
 
-// Company storefront page (their own branded mini-shop)
-app.get('/store/:slug', async (req, res) => {
-  const c = await db.query('SELECT * FROM companies WHERE slug = $1 AND payment_status = $2', [req.params.slug, 'approved']);
-  if (!c.rows.length) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-  const company = c.rows[0];
-  const products = await db.query('SELECT * FROM products WHERE company_id = $1 AND is_active = true ORDER BY created_at DESC', [company.id]);
-  const html = fs.readFileSync(path.join(__dirname, 'public', 'store.html'), 'utf8')
-    .replace('__COMPANY_DATA__', JSON.stringify(company))
-    .replace('__PRODUCTS_DATA__', JSON.stringify(products.rows));
-  res.send(html);
-});
+app.get('/store/:slug', (req, res) => res.redirect('/' + req.params.slug));
 
-// Legacy /view/:id route â€” redirect old links to new store page
 app.get('/view/:companyId', async (req, res) => {
   const r = await db.query('SELECT slug FROM companies WHERE id = $1', [req.params.companyId]);
-  if (r.rows.length && r.rows[0].slug) return res.redirect(`/store/${r.rows[0].slug}`);
+  if (r.rows.length && r.rows[0].slug) return res.redirect('/' + r.rows[0].slug);
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
-// Seller dashboard
 app.get('/dashboard/:companyId', async (req, res) => {
   const r = await db.query('SELECT * FROM companies WHERE id = $1', [req.params.companyId]);
   if (!r.rows.length) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
@@ -95,18 +99,22 @@ app.get('/dashboard/:companyId', async (req, res) => {
 //  API
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// All products across all approved companies â€” marketplace feed
 app.get('/api/products', async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, q } = req.query;
     let query = `
-      SELECT p.*, c.name AS company_name, c.slug AS company_slug
+      SELECT p.*, c.name AS company_name, c.slug AS company_slug, c.business_type
       FROM products p JOIN companies c ON p.company_id = c.id
       WHERE p.is_active = true AND c.payment_status = 'approved'`;
     const params = [];
     if (category && category !== 'all') {
       params.push(category);
-      query += ` AND p.category = $${params.length}`;
+      query += ' AND p.category = $' + params.length;
+    }
+    if (q) {
+      params.push('%' + q.toLowerCase() + '%');
+      const idx = params.length;
+      query += ' AND (LOWER(p.name) LIKE $' + idx + ' OR LOWER(c.name) LIKE $' + idx + ' OR LOWER(p.category) LIKE $' + idx + ')';
     }
     query += ' ORDER BY p.created_at DESC';
     const result = await db.query(query, params);
@@ -117,15 +125,34 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Distinct categories that currently have at least one product
 app.get('/api/categories', async (req, res) => {
   try {
-    const result = await db.query(`
-      SELECT p.category, COUNT(*) AS count
-      FROM products p JOIN companies c ON p.company_id = c.id
-      WHERE p.is_active = true AND c.payment_status = 'approved'
-      GROUP BY p.category ORDER BY count DESC`);
+    const result = await db.query(
+      "SELECT p.category, COUNT(*) AS count " +
+      "FROM products p JOIN companies c ON p.company_id = c.id " +
+      "WHERE p.is_active = true AND c.payment_status = 'approved' " +
+      "GROUP BY p.category HAVING COUNT(*) > 0 ORDER BY count DESC"
+    );
     res.json({ categories: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/discover', async (req, res) => {
+  try {
+    const recent = await db.query(
+      "SELECT p.*, c.name AS company_name, c.slug AS company_slug " +
+      "FROM products p JOIN companies c ON p.company_id = c.id " +
+      "WHERE p.is_active = true AND c.payment_status = 'approved' " +
+      "ORDER BY p.created_at DESC LIMIT 12"
+    );
+    const businesses = await db.query(
+      "SELECT c.id, c.name, c.slug, c.business_type, COUNT(p.id) AS product_count " +
+      "FROM companies c LEFT JOIN products p ON p.company_id = c.id AND p.is_active = true " +
+      "WHERE c.payment_status = 'approved' GROUP BY c.id ORDER BY product_count DESC LIMIT 8"
+    );
+    res.json({ recent: recent.rows, businesses: businesses.rows });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -133,7 +160,10 @@ app.get('/api/categories', async (req, res) => {
 
 app.get('/api/company/:id', async (req, res) => {
   try {
-    const company = await db.query('SELECT id, name, plan, payment_status, slug, address, phone, bio FROM companies WHERE id = $1', [req.params.id]);
+    const company = await db.query(
+      'SELECT id, name, plan, payment_status, slug, address, phone, bio, business_type, logo_url, cover_url FROM companies WHERE id = $1',
+      [req.params.id]
+    );
     if (!company.rows.length) return res.status(404).json({ error: 'Not found' });
     const products = await db.query('SELECT * FROM products WHERE company_id = $1 AND is_active = true ORDER BY created_at DESC', [req.params.id]);
     const limits = await db.query('SELECT max_products FROM plan_limits WHERE plan = $1', [company.rows[0].plan]);
@@ -143,18 +173,48 @@ app.get('/api/company/:id', async (req, res) => {
   }
 });
 
-// Update store profile (address, phone, bio) â€” used by the seller dashboard
 app.put('/api/company/:id/profile', async (req, res) => {
   try {
-    const { address, phone, bio } = req.body;
+    const { address, phone, bio, business_type } = req.body;
     const result = await db.query(
-      `UPDATE companies SET address = $1, phone = $2, bio = $3 WHERE id = $4 AND payment_status = 'approved' RETURNING id, name, slug, address, phone, bio`,
-      [address || null, phone || null, bio || null, req.params.id]
+      "UPDATE companies SET address = $1, phone = $2, bio = $3, business_type = $4 " +
+      "WHERE id = $5 AND payment_status = 'approved' RETURNING id, name, slug, address, phone, bio, business_type",
+      [address || null, phone || null, bio || null, business_type || 'other', req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Company not found or not approved' });
     res.json({ success: true, company: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+app.post('/api/register', async (req, res) => {
+  try {
+    const { name, email, phone, business_type } = req.body;
+    if (!name || !email) return res.status(400).json({ error: 'Business name and email are required' });
+
+    const existing = await db.query('SELECT id FROM companies WHERE email = $1', [email]);
+    if (existing.rows.length) return res.status(400).json({ error: 'An account with this email already exists' });
+
+    const slug = await uniqueSlug(name);
+    const result = await db.query(
+      "INSERT INTO companies (name, email, phone, business_type, slug, payment_status) " +
+      "VALUES ($1,$2,$3,$4,$5,'pending') RETURNING id, name, slug",
+      [name, email, phone || null, business_type || 'other', slug]
+    );
+
+    const adminId = process.env.ADMIN_USER_ID;
+    if (adminId && global.__telegramBotInstance) {
+      const msg = 'ðŸ†• New web registration!\n\nBusiness: ' + name + '\nType: ' + (business_type || 'other') +
+        '\nEmail: ' + email + '\nID: ' + result.rows[0].id +
+        '\n\n/approve ' + result.rows[0].id + '\n/reject ' + result.rows[0].id;
+      global.__telegramBotInstance.sendMessage(adminId, msg).catch(() => {});
+    }
+
+    res.json({ success: true, company: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -169,16 +229,18 @@ app.post('/api/products', upload.fields([{ name: 'model', maxCount: 1 }, { name:
     const lr = await db.query('SELECT max_products FROM plan_limits WHERE plan = $1', [cr.rows[0].plan]);
     const max = lr.rows[0]?.max_products || 5;
     const count = await db.query('SELECT COUNT(*) FROM products WHERE company_id = $1', [company_id]);
-    if (parseInt(count.rows[0].count) >= max) return res.status(400).json({ error: `Plan limit reached (${max} products)` });
+    if (parseInt(count.rows[0].count) >= max) return res.status(400).json({ error: 'Plan limit reached (' + max + ' products)' });
 
-    if (!req.files?.model) return res.status(400).json({ error: 'Model file required' });
+    if (!req.files?.model && !req.files?.image) {
+      return res.status(400).json({ error: 'At least a product image or a 3D model is required' });
+    }
 
-    const modelUrl = `/uploads/models/${req.files.model[0].filename}`;
-    const imageUrl = req.files?.image ? `/uploads/images/${req.files.image[0].filename}` : null;
+    const modelUrl = req.files?.model ? '/uploads/models/' + req.files.model[0].filename : null;
+    const imageUrl = req.files?.image ? '/uploads/images/' + req.files.image[0].filename : null;
 
     const result = await db.query(
-      `INSERT INTO products (company_id, name, description, price, category, image_url, model_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      'INSERT INTO products (company_id, name, description, price, category, image_url, model_url) ' +
+      'VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
       [company_id, name, description || '', price || 0, category || 'other', imageUrl, modelUrl]
     );
     res.json({ success: true, product: result.rows[0] });
@@ -198,7 +260,29 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 });
 
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  CATCH-ALL â€” /:slug must be registered LAST so it never shadows
+//  /product, /dashboard, /api, /uploads, /register, etc.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+app.get('/:slug', async (req, res, next) => {
+  const slug = req.params.slug;
+  if (RESERVED_SLUGS.includes(slug)) return next();
+
+  const c = await db.query('SELECT * FROM companies WHERE slug = $1 AND payment_status = $2', [slug, 'approved']);
+  if (!c.rows.length) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+
+  const company = c.rows[0];
+  const products = await db.query('SELECT * FROM products WHERE company_id = $1 AND is_active = true ORDER BY created_at DESC', [company.id]);
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'store.html'), 'utf8')
+    .replace('__COMPANY_DATA__', JSON.stringify(company))
+    .replace('__PRODUCTS_DATA__', JSON.stringify(products.rows));
+  res.send(html);
+});
+
+app.use((req, res) => res.status(404).sendFile(path.join(__dirname, 'public', '404.html')));
+
 initDb().then(() => {
-  startBot();
-  app.listen(PORT, () => console.log(`ðŸš€ Server running on port ${PORT}`));
-}).catch(err => { console.error('Startup failed:', err); process.exit(1); });
+  const bot = startBot();
+  if (bot) global.__telegramBotInstance = bot;
+  app.listen(PORT, () => console.log('ðŸš€ Server running on port ' + PORT));
+}).catch(function(err) { console.error('Startup failed:', err); process.exit(1); });
