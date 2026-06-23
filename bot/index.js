@@ -5,6 +5,18 @@ function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 }
 
+const BUSINESS_TYPES = [
+  { key: 'restaurant',  label: 'ðŸ½ Restaurant' },
+  { key: 'furniture',   label: 'ðŸª‘ Furniture Store' },
+  { key: 'electronics', label: 'ðŸ“± Electronics Store' },
+  { key: 'fashion',     label: 'ðŸ‘— Fashion Store' },
+  { key: 'lighting',    label: 'ðŸ’¡ Lighting Store' },
+  { key: 'other',       label: 'ðŸ“¦ Other' }
+];
+
+// Holds in-progress registrations waiting on a business-type button tap
+const pendingRegistrations = {};
+
 function startBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const adminId = String(process.env.ADMIN_USER_ID);
@@ -22,11 +34,11 @@ function startBot() {
         const e = { approved: 'âœ…', pending: 'â³', rejected: 'âŒ' }[c.payment_status] || 'â“';
         bot.sendMessage(chatId,
           `Welcome back *${c.name}*!\nStatus: ${e} ${c.payment_status}` +
-          (c.payment_status === 'approved' ? `\n\nYour store: ${process.env.BASE_URL}/store/${c.slug}` : ''),
+          (c.payment_status === 'approved' ? `\n\nYour page: ${process.env.BASE_URL}/${c.slug}` : ''),
           { parse_mode: 'Markdown' }
         );
       } else {
-        bot.sendMessage(chatId, 'ðŸ‘‹ Welcome!\n\nTo register send:\n/register Your Company Name');
+        bot.sendMessage(chatId, 'ðŸ‘‹ Welcome!\n\nTo register send:\n/register Your Business Name');
       }
     } catch (e) { bot.sendMessage(chatId, 'Error. Try again.'); }
   });
@@ -38,6 +50,32 @@ function startBot() {
       const ex = await db.query('SELECT id FROM companies WHERE telegram_chat_id=$1', [String(chatId)]);
       if (ex.rows.length) return bot.sendMessage(chatId, 'Already registered. Use /status');
 
+      // Stash the name, ask for business type next via buttons
+      pendingRegistrations[chatId] = { name };
+
+      bot.sendMessage(chatId, `What type of business is *${name}*?`, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: BUSINESS_TYPES.map(t => [{ text: t.label, callback_data: 'biztype:' + t.key }])
+        }
+      });
+    } catch (e) { bot.sendMessage(chatId, 'Failed. Try again.'); }
+  });
+
+  // Handles the business-type button tap and completes registration
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const data = query.data || '';
+    if (!data.startsWith('biztype:')) return;
+
+    const businessType = data.replace('biztype:', '');
+    const pending = pendingRegistrations[chatId];
+    if (!pending) {
+      return bot.answerCallbackQuery(query.id, { text: 'Session expired. Send /register again.' });
+    }
+
+    try {
+      const name = pending.name;
       const baseSlug = slugify(name);
       let slug = baseSlug, n = 1;
       while ((await db.query('SELECT id FROM companies WHERE slug=$1', [slug])).rows.length) {
@@ -45,13 +83,24 @@ function startBot() {
       }
 
       const r = await db.query(
-        `INSERT INTO companies (name,email,telegram_chat_id,payment_status,slug) VALUES ($1,$2,$3,'pending',$4) RETURNING id`,
-        [name, `tg_${chatId}@x.com`, String(chatId), slug]
+        `INSERT INTO companies (name,email,telegram_chat_id,payment_status,slug,business_type)
+         VALUES ($1,$2,$3,'pending',$4,$5) RETURNING id`,
+        [name, `tg_${chatId}@x.com`, String(chatId), slug, businessType]
       );
       const id = r.rows[0].id;
-      bot.sendMessage(chatId, `âœ… Registered!\nCompany: *${name}*\nStatus: â³ Pending approval`, { parse_mode: 'Markdown' });
-      if (adminId) bot.sendMessage(adminId, `ðŸ†• New: *${name}* (ID:${id})\n/approve ${id}\n/reject ${id}`, { parse_mode: 'Markdown' });
-    } catch (e) { bot.sendMessage(chatId, 'Failed. Try again.'); }
+      delete pendingRegistrations[chatId];
+
+      const typeLabel = (BUSINESS_TYPES.find(t => t.key === businessType) || {}).label || businessType;
+      bot.answerCallbackQuery(query.id, { text: 'Registered!' });
+      bot.sendMessage(chatId, `âœ… Registered!\nBusiness: *${name}*\nType: ${typeLabel}\nStatus: â³ Pending approval`, { parse_mode: 'Markdown' });
+
+      if (adminId) bot.sendMessage(adminId,
+        `ðŸ†• New: *${name}* (${typeLabel})\nID: ${id}\n\n/approve ${id}\n/reject ${id}`,
+        { parse_mode: 'Markdown' }
+      );
+    } catch (e) {
+      bot.answerCallbackQuery(query.id, { text: 'Something went wrong.' });
+    }
   });
 
   bot.onText(/\/status/, async msg => {
@@ -63,7 +112,7 @@ function startBot() {
       const e = { approved: 'âœ…', pending: 'â³', rejected: 'âŒ' }[c.payment_status] || 'â“';
       bot.sendMessage(chatId,
         `*${c.name}*\nStatus: ${e} ${c.payment_status}` +
-        (c.payment_status === 'approved' ? `\n\nStore: ${process.env.BASE_URL}/store/${c.slug}\nDashboard: ${process.env.BASE_URL}/dashboard/${c.id}` : ''),
+        (c.payment_status === 'approved' ? `\n\nPage: ${process.env.BASE_URL}/${c.slug}\nDashboard: ${process.env.BASE_URL}/dashboard/${c.id}` : ''),
         { parse_mode: 'Markdown' }
       );
     } catch (e) { bot.sendMessage(chatId, 'Error.'); }
@@ -90,7 +139,7 @@ function startBot() {
       const c = r.rows[0];
       bot.sendMessage(chatId, `âœ… Approved: ${c.name}`);
       if (c.telegram_chat_id) bot.sendMessage(c.telegram_chat_id,
-        `ðŸŽ‰ Approved!\n\nYour store: ${process.env.BASE_URL}/store/${c.slug}\nDashboard (upload products): ${process.env.BASE_URL}/dashboard/${c.id}`
+        `ðŸŽ‰ Approved!\n\nYour page: ${process.env.BASE_URL}/${c.slug}\nDashboard (upload products): ${process.env.BASE_URL}/dashboard/${c.id}`
       );
     } catch (e) { bot.sendMessage(chatId, 'Error.'); }
   });
