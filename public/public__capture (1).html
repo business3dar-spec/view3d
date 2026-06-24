@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scan your product — View3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{ --bg:#0d0d10; --surface:#17171b; --ink:#fff; --muted:#9a9aa5; --accent:#2f6b3f; --line:#2a2a30; --danger:#c0392b; }
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+  .screen{min-height:100vh;display:flex;flex-direction:column;}
+  header{padding:1rem 1.2rem;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-weight:800;font-size:1rem;}
+  .step-pill{font-size:.74rem;color:var(--muted);background:var(--surface);padding:.3rem .7rem;border-radius:999px;}
+
+  main{flex:1;display:flex;flex-direction:column;padding:1.4rem 1.2rem;}
+
+  /* ── Intro screen ──────────────────────────────────────── */
+  .intro h1{font-size:1.4rem;font-weight:800;line-height:1.3;margin-bottom:.7rem;}
+  .intro p{color:var(--muted);font-size:.9rem;line-height:1.6;margin-bottom:1rem;}
+  .tips{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.5rem;}
+  .tips li{font-size:.84rem;color:var(--muted);margin-bottom:.5rem;padding-left:1.2rem;position:relative;}
+  .tips li::before{content:'✓';position:absolute;left:0;color:var(--accent);font-weight:800;}
+  .tips li:last-child{margin-bottom:0;}
+  .product-name-tag{font-size:.78rem;color:var(--accent);font-weight:700;margin-bottom:.4rem;}
+
+  /* ── Capture screen ────────────────────────────────────── */
+  .camera-wrap{position:relative;flex:1;border-radius:14px;overflow:hidden;background:#000;min-height:300px;}
+  video{width:100%;height:100%;object-fit:cover;display:block;}
+  .guide-ring{position:absolute;inset:8%;border:2px dashed rgba(255,255,255,.35);border-radius:14px;pointer-events:none;}
+  .shot-counter{position:absolute;top:.8rem;left:.8rem;background:rgba(0,0,0,.6);padding:.4rem .8rem;border-radius:999px;font-size:.82rem;font-weight:700;}
+  .angle-hint{position:absolute;bottom:.9rem;left:0;right:0;text-align:center;font-size:.84rem;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+
+  .capture-controls{display:flex;align-items:center;justify-content:center;gap:1.5rem;padding:1.3rem 0 .5rem;}
+  .shutter-btn{width:68px;height:68px;border-radius:50%;background:#fff;border:4px solid var(--accent);cursor:pointer;}
+  .shutter-btn:active{transform:scale(.93);}
+  .thumb-strip{display:flex;gap:.4rem;overflow-x:auto;padding:.5rem 0;scrollbar-width:none;}
+  .thumb-strip::-webkit-scrollbar{display:none;}
+  .thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);}
+
+  .progress-bar-wrap{height:5px;background:var(--surface);border-radius:99px;overflow:hidden;margin-bottom:.9rem;}
+  .progress-bar{height:100%;background:var(--accent);width:0%;transition:width .25s;}
+
+  .primary-btn{
+    width:100%;background:var(--accent);color:#fff;border:none;padding:.95rem;border-radius:10px;
+    font-size:.95rem;font-weight:800;cursor:pointer;margin-top:.5rem;
+  }
+  .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .ghost-btn{width:100%;background:none;color:var(--muted);border:none;padding:.7rem;font-size:.85rem;cursor:pointer;}
+
+  /* ── Processing / done screens ─────────────────────────── */
+  .center-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1rem;}
+  .spinner{width:48px;height:48px;border:4px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .big-icon{font-size:3rem;}
+  .center-screen h2{font-size:1.2rem;font-weight:800;}
+  .center-screen p{color:var(--muted);font-size:.88rem;max-width:300px;line-height:1.6;}
+
+  .hidden{display:none !important;}
+  .error-box{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.3);color:#ff8a7a;border-radius:10px;padding:.8rem 1rem;font-size:.84rem;margin-bottom:1rem;}
+</style>
+</head>
+<body>
+
+<script>const TOKEN = "__CAPTURE_TOKEN__"; const PRODUCT_NAME = "__PRODUCT_NAME__";</script>
+
+<div class="screen">
+  <header>
+    <div class="logo">View3D Scan</div>
+    <div class="step-pill" id="step-pill">Step 1 of 2</div>
+  </header>
+
+  <main>
+    <!-- INTRO -->
+    <div id="screen-intro" class="intro">
+      <div class="product-name-tag" id="intro-product-name"></div>
+      <h1>Let's create a 3D model of your product</h1>
+      <p>You'll take a series of photos walking around the object. It takes about 2 minutes.</p>
+      <ul class="tips">
+        <li>Place the product on a plain surface with good light</li>
+        <li>Keep the object centered in the frame the whole time</li>
+        <li>Move slowly in a full circle around it</li>
+        <li>Take 20–30 photos from different angles and heights</li>
+      </ul>
+      <button class="primary-btn" id="start-btn">Start camera</button>
+    </div>
+
+    <!-- CAPTURE -->
+    <div id="screen-capture" class="hidden" style="flex:1;display:flex;flex-direction:column;">
+      <div class="error-box hidden" id="cam-error"></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="camera-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="guide-ring"></div>
+        <div class="shot-counter" id="shot-counter">0 / 24</div>
+        <div class="angle-hint" id="angle-hint">Start at the front, then move slowly around</div>
+      </div>
+      <div class="capture-controls">
+        <button class="shutter-btn" id="shutter-btn" aria-label="Take photo"></button>
+      </div>
+      <div class="thumb-strip" id="thumb-strip"></div>
+      <button class="primary-btn" id="finish-btn" disabled>Finish & Generate 3D Model</button>
+      <button class="ghost-btn" id="retake-btn">Clear photos and start over</button>
+    </div>
+
+    <!-- UPLOADING / PROCESSING -->
+    <div id="screen-processing" class="hidden center-screen">
+      <div class="spinner"></div>
+      <h2 id="processing-title">Uploading your photos…</h2>
+      <p id="processing-text">This usually takes a couple of minutes. You can close this page — we'll notify you on Telegram when it's ready.</p>
+    </div>
+
+    <!-- DONE -->
+    <div id="screen-done" class="hidden center-screen">
+      <div class="big-icon">✅</div>
+      <h2>Finished successfully!</h2>
+      <p>Your 3D model is being generated and will be attached to your product automatically. Head back to Telegram to continue.</p>
+    </div>
+
+    <!-- ERROR / NOT CONFIGURED -->
+    <div id="screen-blocked" class="hidden center-screen">
+      <div class="big-icon">⚠️</div>
+      <h2 id="blocked-title">This link isn't valid</h2>
+      <p id="blocked-text">Please go back to Telegram and request a new capture link.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const MIN_SHOTS = 20;
+  const MAX_SHOTS = 30;
+  let stream = null;
+  let shots = []; // array of Blobs
+
+  const ANGLE_HINTS = [
+    'Start at the front, then move slowly around',
+    'Keep going around the side',
+    'Now capture the back',
+    'Continue around the other side',
+    'Try a slightly higher angle',
+    'Try a slightly lower angle',
+    'Almost there — fill in any gaps',
+    'Great coverage — a few more for safety'
+  ];
+
+  function show(id) {
+    ['screen-intro','screen-capture','screen-processing','screen-done','screen-blocked'].forEach(s => {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  document.getElementById('intro-product-name').textContent = PRODUCT_NAME ? ('Product: ' + PRODUCT_NAME) : '';
+
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      document.getElementById('video').srcObject = stream;
+      show('screen-capture');
+      document.getElementById('step-pill').textContent = 'Step 2 of 2';
+    } catch (err) {
+      document.getElementById('cam-error').textContent = 'Camera access denied. Please allow camera permissions and reload this page.';
+      document.getElementById('cam-error').classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('shutter-btn').addEventListener('click', () => {
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+      shots.push(blob);
+      updateUI();
+    }, 'image/jpeg', 0.9);
+  });
+
+  function updateUI() {
+    const count = shots.length;
+    document.getElementById('shot-counter').textContent = count + ' / ' + MIN_SHOTS;
+    document.getElementById('progress-bar').style.width = Math.min(100, (count / MIN_SHOTS) * 100) + '%';
+    document.getElementById('finish-btn').disabled = count < MIN_SHOTS;
+
+    const hintIndex = Math.min(ANGLE_HINTS.length - 1, Math.floor((count / MIN_SHOTS) * ANGLE_HINTS.length));
+    document.getElementById('angle-hint').textContent = ANGLE_HINTS[hintIndex];
+
+    const strip = document.getElementById('thumb-strip');
+    const lastShot = shots[shots.length - 1];
+    if (lastShot) {
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.src = URL.createObjectURL(lastShot);
+      strip.appendChild(img);
+      strip.scrollLeft = strip.scrollWidth;
+    }
+
+    if (count >= MAX_SHOTS) {
+      document.getElementById('shutter-btn').disabled = true;
+    }
+  }
+
+  document.getElementById('retake-btn').addEventListener('click', () => {
+    shots = [];
+    document.getElementById('thumb-strip').innerHTML = '';
+    updateUI();
+  });
+
+  document.getElementById('finish-btn').addEventListener('click', async () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    show('screen-processing');
+
+    const form = new FormData();
+    form.append('token', TOKEN);
+    shots.forEach((blob, i) => form.append('photos', blob, 'photo' + i + '.jpg'));
+
+    try {
+      const res = await fetch('/api/capture/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      document.getElementById('processing-title').textContent = 'Processing your 3D model…';
+      show('screen-done');
+    } catch (err) {
+      document.getElementById('blocked-title').textContent = 'Upload failed';
+      document.getElementById('blocked-text').textContent = err.message;
+      show('screen-blocked');
+    }
+  });
+
+  // Validate the token on load
+  fetch('/api/capture/check?token=' + encodeURIComponent(TOKEN))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.valid) {
+        document.getElementById('blocked-text').textContent = 'This capture link has expired or was already used.';
+        show('screen-blocked');
+      }
+    })
+    .catch(() => {
+      document.getElementById('blocked-text').textContent = 'Could not verify this link. Check your connection and reload.';
+      show('screen-blocked');
+    });
+</script>
+</body>
+</html>
