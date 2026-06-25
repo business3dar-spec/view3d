@@ -480,6 +480,50 @@ function startBot() {
     } catch (e) { bot.sendMessage(chatId, 'Error.'); }
   });
 
+  // â”€â”€ ADMIN: /recheck <product_id> â€” manually re-poll a stuck KIRI job â”€â”€â”€â”€
+  // Useful if a job timed out on our side but may have actually finished
+  // on KIRI's servers. Looks up the product's stored kiri_serialize and
+  // checks its real current status directly.
+  bot.onText(/\/recheck (\d+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    if (!isAdmin(chatId)) return bot.sendMessage(chatId, 'Admin only.');
+    try {
+      const p = await db.query('SELECT * FROM products WHERE id = $1', [match[1]]);
+      if (!p.rows.length) return bot.sendMessage(chatId, 'Product not found.');
+      const product = p.rows[0];
+      if (!product.kiri_serialize) return bot.sendMessage(chatId, 'This product has no KIRI job associated with it.');
+
+      const statusResult = await kiri.getStatus(product.kiri_serialize);
+      if (!statusResult.ok) return bot.sendMessage(chatId, 'âš ï¸ Could not reach KIRI: ' + statusResult.reason);
+
+      bot.sendMessage(chatId, `KIRI status for "${product.name}": *${statusResult.status}* (raw code: ${statusResult.raw})`, { parse_mode: 'Markdown' });
+
+      if (statusResult.status === 'success') {
+        const saveResult = await kiri.downloadAndSaveGlb(product.kiri_serialize, product.id);
+        if (saveResult.ok) {
+          await db.query('UPDATE products SET model_url = $1, capture_status = $2 WHERE id = $3', [saveResult.modelUrl, 'completed', product.id]);
+          bot.sendMessage(chatId, 'âœ… Model downloaded and attached successfully!');
+          if (product.company_id) {
+            const c = await db.query('SELECT telegram_chat_id FROM companies WHERE id = $1', [product.company_id]);
+            if (c.rows[0] && c.rows[0].telegram_chat_id) {
+              bot.sendMessage(c.rows[0].telegram_chat_id, `ðŸŽ‰ Your 3D model for "${product.name}" is ready and has been added!`);
+            }
+          }
+        } else {
+          bot.sendMessage(chatId, 'âš ï¸ Status is success but download failed: ' + saveResult.reason);
+        }
+      } else if (statusResult.status === 'failed' || statusResult.status === 'expired') {
+        await db.query('UPDATE products SET capture_status = $1 WHERE id = $2', ['failed', product.id]);
+        bot.sendMessage(chatId, 'This job genuinely failed on KIRI\'s side. The owner will need to redo the capture.');
+      } else {
+        bot.sendMessage(chatId, 'Still processing on KIRI\'s side â€” check again in a few minutes.');
+      }
+    } catch (e) {
+      console.error(e);
+      bot.sendMessage(chatId, 'Error checking KIRI status.');
+    }
+  });
+
   // Exposed so index.js can resume the conversation automatically once
   // KIRI's background processing finishes (the owner never has to do
   // anything after tapping "Finish" in the capture page).
