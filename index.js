@@ -156,9 +156,17 @@ async function processKiriJobInBackground(serialize, productId, tempImagePaths) 
     };
 
     if (!pollResult.ok) {
-      await db.query('UPDATE products SET capture_status = $1 WHERE id = $2', ['failed', productId]);
       cleanupTempPhotos();
-      return notifyOwner(productId, 'âŒ Sorry, 3D model generation failed for one of your products. Please try the capture link again.');
+      if (pollResult.terminal) {
+        // KIRI itself reported failed/expired â€” this is a real, final failure.
+        await db.query('UPDATE products SET capture_status = $1 WHERE id = $2', ['failed', productId]);
+        return notifyOwner(productId, 'âŒ Sorry, 3D model generation failed for one of your products. Please try the capture link again.');
+      }
+      // We simply stopped waiting â€” KIRI may still finish. Leave status as
+      // "processing" so the /api/kiri/webhook (or a manual recheck) can still
+      // complete it later instead of wrongly telling the owner it failed.
+      console.warn('KIRI poll timed out for serialize ' + serialize + ' â€” leaving status as processing');
+      return;
     }
 
     const saveResult = await kiri.downloadAndSaveGlb(serialize, productId);
@@ -173,7 +181,8 @@ async function processKiriJobInBackground(serialize, productId, tempImagePaths) 
     await notifyOwnerCaptureComplete(productId);
   } catch (err) {
     console.error('Background KIRI processing error:', err);
-    await db.query('UPDATE products SET capture_status = $1 WHERE id = $2', ['failed', productId]).catch(function(){});
+    // Don't mark as failed on an unexpected error either â€” log it and leave
+    // the product in its current state so it can be retried/rechecked.
   }
 }
 
