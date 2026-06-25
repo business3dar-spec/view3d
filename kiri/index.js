@@ -78,16 +78,21 @@ async function getStatus(serialize) {
 }
 
 // Polls every `intervalMs` until success/failed/expired, or `maxWaitMs` elapses.
-async function pollUntilDone(serialize, intervalMs = 10000, maxWaitMs = 15 * 60 * 1000) {
+// KIRI processing can genuinely take 20-40+ minutes for high-quality scans,
+// so this defaults to a generous 45 minutes rather than failing prematurely.
+async function pollUntilDone(serialize, intervalMs = 15000, maxWaitMs = 45 * 60 * 1000) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const result = await getStatus(serialize);
     if (!result.ok) return result;
     if (result.status === 'success') return { ok: true, status: 'success' };
-    if (result.status === 'failed' || result.status === 'expired') return { ok: false, reason: `KIRI job ${result.status}` };
+    if (result.status === 'failed' || result.status === 'expired') return { ok: false, reason: `KIRI job ${result.status}`, terminal: true };
     await new Promise(r => setTimeout(r, intervalMs));
   }
-  return { ok: false, reason: 'Timed out waiting for KIRI to finish' };
+  // Timed out waiting â€” NOT a confirmed failure. The job may still be processing
+  // on KIRI's side. Mark it distinctly so the webhook or a later check can still
+  // pick it up instead of the owner being told it failed when it might not have.
+  return { ok: false, reason: 'Timed out waiting for KIRI (still may finish later)', terminal: false };
 }
 
 // Gets the (time-limited) download URL for the finished model zip.
